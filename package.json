@@ -1,5 +1,5 @@
 {
-  "version": "0.0.1-alpha",
+  "version": "0.0.1-alpha2",
   "name": "cbpgm",
   "dependencies": {
     "lodash": "^4.17.21",
@@ -8,6 +8,6 @@
   },
   "main": "index.js",
   "bin": {
-    "pgmigrate": "cli.js"
+    "cbpgm": "cli.js"
   }
 }
