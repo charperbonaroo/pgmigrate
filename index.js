@@ -97,7 +97,7 @@ async function migrate(config) {
 
       for (const { id, up } of missingMigrations) {
         console.log(`RUNNING ${up}`);
-        const sql = await readFile(path.join(dir, up), "utf-8");
+        const sql = await readFile(path.join(config.dir, up), "utf-8");
         await runSqlFileContent(client, sql);
         await client.query(`INSERT INTO migrations (migration_id, migration_run_id) VALUES ($1, $2)`, [ id, migrationRunId ])
       }
@@ -136,7 +136,7 @@ async function rollback(config) {
     if (rollbackMigrations.length > 0) {
       for (const { down } of rollbackMigrations) {
         console.log(`RUNNING ${down}`);
-        const sql = await readFile(path.join(dir, down), "utf-8");
+        const sql = await readFile(path.join(config.dir, down), "utf-8");
         await runSqlFileContent(client, sql);
       }
       await client.query(`DELETE FROM migrations WHERE migration_run_id = $1`, [ lastRunId ]);
