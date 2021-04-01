@@ -2,6 +2,10 @@
 
 Screw DSLs. Write migrations using plain SQL.
 
+## INSTALL
+
+`npm i cbpgm`
+
 ## Example
 
 ```
