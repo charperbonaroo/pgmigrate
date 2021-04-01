@@ -73,7 +73,13 @@ async function ensureMigrationsTables(client) {
 }
 
 async function recreate(config) {
-  await dropdb(config);
+  try {
+    await dropdb(config);
+  } catch (error) {
+    if (error.message !== "Attempted to drop a database that does not exist") {
+      throw error;
+    }
+  }
   await migrate(config);
 }
 
