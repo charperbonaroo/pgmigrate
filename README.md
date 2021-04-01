@@ -15,17 +15,17 @@ migrations/
 ```
 
 ```sh
-pgmigrate migrate
+cbpgm migrate
 ```
 
 ## CONFIG
 
-`pgmigrate`'s cli will look for a `.pgmigrate.js` file in the current working directory. If it cannot find any, it will load a default config file.
+`cbpgm`'s cli will look for a `.cbpgm.js` file in the current working directory. If it cannot find any, it will load a default config file.
 
 The default config will look for a `migrations` dir in the current working directory, and it will let `pg.Client` connect using the usual postgres-specific environment variables, which are documented [here](https://node-postgres.com/api/client).
 
 ```js
-// .pgmigrate.js
+// .cbpgm.js
 {
   pg: {
     // Options used to initialise node-progress client
@@ -46,4 +46,4 @@ The default config will look for a `migrations` dir in the current working direc
 
 ## PROGRAMMATIC API
 
-All any of the commands as a function with `config` as first param. Returns a promise. Eg `await require("pgmigrate").migrate({ dir: "migrations", pg: { host: "localhost" }})`
+All any of the commands as a function with `config` as first param. Returns a promise. Eg `await require("cbpgm").migrate({ dir: "migrations", pg: { host: "localhost" }})`
