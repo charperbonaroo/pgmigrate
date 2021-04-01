@@ -6,7 +6,7 @@ const fs = require("fs");
 
 const cmd = process.argv[process.argv.length - 1];
 
-const configPath = path.join(process.cwd(), ".pgconfig.js");
+const configPath = path.join(process.cwd(), ".cbpgm.js");
 
 const config = fs.existsSync(configPath) ? require(configPath) : {
   dir: path.join(process.cwd(), "migrations"),
@@ -22,7 +22,7 @@ config.pg = config.pg || {};
 config.pg.database = config.pg.database || process.env.PGDATABASE;
 
 if (!config.pg.database) {
-  throw new Error(`Couldn't determine current database - create .pgconfig.js config file or set env PGDATABASE`);
+  throw new Error(`Couldn't determine current database - create .cbpgm.js config file or set env PGDATABASE`);
 }
 
 async function main(cmd) {
