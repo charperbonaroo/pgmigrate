@@ -1,5 +1,5 @@
 {
-  "version": "0.0.1-alpha4",
+  "version": "0.0.1",
   "name": "cbpgm",
   "dependencies": {
     "lodash": "^4.17.21",
