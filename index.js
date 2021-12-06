@@ -59,7 +59,7 @@ async function getMigrations(config) {
     } else {
       return null;
     }
-  }).filter(_ => _).reduce((acc, value) => ({ ...acc, [value.id]: value }), {});
+  }).filter(_ => _ && (_.up || _.down)).reduce((acc, value) => ({ ...acc, [value.id]: value }), {});
   const keys = Object.keys(migrationMap)
   naturalSort(keys);
   return keys.map((key) => migrationMap[key]);
@@ -200,7 +200,7 @@ async function config(config) {
 }
 
 async function help() {
-  console.log(await readFile(path.join(__dirname, "HELP.txt"), "utf-8"))
+  console.log(await readFile(path.join(__dirname, "README"), "utf-8"))
 }
 
 async function list(config) {
@@ -214,9 +214,11 @@ async function list(config) {
   } finally {
     await client.end();
   }
-  console.log(done);
-  for (const migration of migrations) {
-    console.log(`${migration.id}`)
+
+  done = (done && done.rows || []).map((_) => _.migration_id)
+
+  for (const {id} of migrations) {
+    console.log([ done.includes(id) ? `done` : `NEW `, id ].join(" "));
   }
 }
 
