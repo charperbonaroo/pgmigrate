@@ -217,8 +217,29 @@ async function list(config) {
 
   done = (done && done.rows || []).map((_) => _.migration_id)
 
+  const completed = [];
+  const pending = [];
+
   for (const {id} of migrations) {
-    console.log([ done.includes(id) ? `done` : `NEW `, id ].join(" "));
+    if (done.includes(id)) {
+      completed.push(id);
+    } else {
+      pending.push(id);
+    }
+  }
+
+  console.log("DONE");
+  if (completed.length) {
+    console.log("\n  "+completed.join("\n  ") + "\n")
+  } else {
+    console.log(`\n  -\n`)
+  }
+
+  console.log("NEW");
+  if (pending.length) {
+    console.log("\n  "+pending.join("\n  ") + "\n")
+  } else {
+    console.log(`\n  -\n`);
   }
 }
 
