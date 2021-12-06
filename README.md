@@ -30,7 +30,7 @@ The default config will look for a `migrations` dir in the current working direc
 
 ```js
 // .cbpgm.js
-{
+module.exports = {
   pg: {
     // Options used to initialise node-progress client
     // See: https://node-postgres.com/api/client
