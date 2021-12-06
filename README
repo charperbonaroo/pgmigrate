@@ -12,10 +12,10 @@ Screw DSLs. Write migrations using plain SQL.
             `migrate`-call (even if the folder had no `up.sql` file) in reverse
             order.
 
-  init    Create the .cbpgm.js config file & migrations directory
-  config  Print the current postgres config
-  help    Render this help-text
-  list    Print the list of migrations and their status
+  init      Create the .cbpgm.js config file & migrations directory
+  config    Print the current postgres config
+  help      Render this help-text
+  list      Print the list of migrations and their status
 
   createdb  Create the postgres database (without migrations)
   dropdb    Delete the postgres database.
