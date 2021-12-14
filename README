@@ -1,0 +1,45 @@
+Charper Bonaroo's PostGres Migrate tool
+
+Screw DSLs. Write migrations using plain SQL.
+
+  recreate  Fastest way to start fresh: Drop if exists, then create and migrate
+
+  migrate   Create database if not exists, then run the `up.sql` files for the
+            migrations and add them to the list of completed migrations, sorted
+            naturally.
+
+  rollback  Run `down.sql` (if exists) for all migrations executed in the last
+            `migrate`-call (even if the folder had no `up.sql` file) in reverse
+            order.
+
+  init      Create the .cbpgm.js config file & migrations directory
+  config    Print the current postgres config
+  help      Render this help-text
+  list      Print the list of migrations and their status
+
+  createdb  Create the postgres database (without migrations)
+  dropdb    Delete the postgres database.
+
+This tool allows you to write migration scripts in plain SQL. You create your
+migration by creating a folder containing a `up.sql` and `down.sql` file. The
+migrations (i.e. the `up.sql` files) will be executed in their containing
+folder's natural sort order. Migrations will only be executed once unless
+they've been rolled back. The `up.sql` and `down.sql` aren't both required, but
+one of them should exist. Alternatively, if you only need an `up.sql`, you can
+also use an .sql file directly in the migrations root folder. E.g. creating a
+`123-foo.sql` file has the same effect as creating a `123-foo/up.sql` file
+without a `down.sql` file.
+
+Sorting of migrations is done using a NATURAL ORDER. Natural sorting is the
+ordering of strings in alphabetical order, except that multi-digit numbers are
+treated atomically, i.e., as if they were a single character.
+
+Example folder structure (naturally sorted):
+
+  migrations/
+    1-add-users/     up.sql  down.sql
+    2-add-posts/     up.sql  down.sql
+    3-add-comments/  up.sql  down.sql
+    12-add-categories.sql
+    13-add-votes/    up.sql  down.sql
+    101-add-reports/ up.sql  down.sql

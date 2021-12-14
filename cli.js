@@ -6,31 +6,23 @@ const fs = require("fs");
 
 const cmd = process.argv[process.argv.length - 1];
 
-const configPath = path.join(process.cwd(), ".cbpgm.js");
+const configPath = path.join(process.cwd(), migrate.CONFIG_FILENAME);
 
 const config = fs.existsSync(configPath) ? require(configPath) : {
   dir: path.join(process.cwd(), "migrations"),
 };
 
-if (!fs.existsSync(config.dir)) {
-  console.log(`CREATING ${config.dir} FOR MIGRATIONS`);
-  fs.mkdirSync(config.dir, { recursive: true });
-}
-
 config.pg = config.pg || {};
-
-config.pg.database = config.pg.database || process.env.PGDATABASE;
-
-if (!config.pg.database) {
-  throw new Error(`Couldn't determine current database - create .cbpgm.js config file or set env PGDATABASE`);
-}
 
 async function main(cmd) {
   try {
     if (!migrate[cmd]) {
-      cmd = "migrate";
+      if (cmd) {
+        console.log(`Unknown command '${cmd}'?\n`);
+      }
+      cmd = "help";
     }
-    migrate[cmd](config);
+    await migrate[cmd](config);
   } catch (error) {
     console.error(error);
     process.exit(1);
