@@ -1,11 +1,10 @@
-#!/usr/bin/env node
+#!/usr/bin/env -S node --require ./.pnp.cjs
 
 const migrate = require(".");
 const path = require("path");
 const fs = require("fs");
 
 const cmd = process.argv[process.argv.length - 1];
-
 const configPath = path.join(process.cwd(), migrate.CONFIG_FILENAME);
 
 const config = fs.existsSync(configPath) ? require(configPath) : {

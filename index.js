@@ -8,7 +8,7 @@ const ConnectionParameters = require("pg/lib/connection-parameters");
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 
-const CONFIG_FILENAME = `.cbpgm.js`;
+const CONFIG_FILENAME = process.env.CONFIG_FILENAME || `.cbpgm.js`;
 
 async function getClient(config) {
   const client = new Client(config.pg);

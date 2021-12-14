@@ -2,6 +2,14 @@ Charper Bonaroo's PostGres Migrate tool
 
 Screw DSLs. Write migrations using plain SQL.
 
+Examples:
+
+  cbpgm init
+  cbpgm recreate
+  cbpgm migrate
+
+Commands:
+
   recreate  Fastest way to start fresh: Drop if exists, then create and migrate
 
   migrate   Create database if not exists, then run the `up.sql` files for the

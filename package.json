@@ -7,7 +7,5 @@
     "pgtools": "^0.3.1"
   },
   "main": "index.js",
-  "bin": {
-    "cbpgm": "cli.js"
-  }
+  "bin": "cli.js"
 }
