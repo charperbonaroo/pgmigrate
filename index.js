@@ -70,22 +70,22 @@ function exists(path) {
 }
 
 async function getMigrationsDone(client) {
-  return client.query(`SELECT id, migration_id, migration_run_id FROM migrations`);
+  return client.query(`SELECT id, migration_id, migration_run_id FROM cbpgm_migrations`);
 }
 
 async function ensureMigrationsTables(client) {
-  console.log(`CREATE TABLE IF NOT EXISTS migration_runs`)
-  await client.query(`CREATE TABLE IF NOT EXISTS migration_runs (
+  console.log(`CREATE TABLE IF NOT EXISTS cbpgm_migration_runs`)
+  await client.query(`CREATE TABLE IF NOT EXISTS cbpgm_migration_runs (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`);
 
-  console.log(`CREATE TABLE IF NOT EXISTS migrations`)
-  await client.query(`CREATE TABLE IF NOT EXISTS migrations (
+  console.log(`CREATE TABLE IF NOT EXISTS cbpgm_migrations`)
+  await client.query(`CREATE TABLE IF NOT EXISTS cbpgm_migrations (
     id SERIAL PRIMARY KEY,
     migration_id TEXT NOT NULL,
     migration_run_id INT NOT NULL,
-    CONSTRAINT fk_migration_runs FOREIGN KEY (migration_run_id) REFERENCES migration_runs(id)
+    CONSTRAINT fk_migration_runs FOREIGN KEY (migration_run_id) REFERENCES cbpgm_migration_runs(id)
   )`);
 }
 
@@ -116,7 +116,7 @@ async function migrate(config) {
     const missingMigrations = migrations.filter(({ id }) => !doneMigrationIds.includes(id));
 
     if (missingMigrations.length > 0) {
-      const insertResult = await client.query(`INSERT INTO migration_runs DEFAULT VALUES RETURNING id`);
+      const insertResult = await client.query(`INSERT INTO cbpgm_migration_runs DEFAULT VALUES RETURNING id`);
       const migrationRunId = insertResult.rows[0].id;
       const realPath = fs.realpathSync(config.dir);
 
@@ -128,7 +128,7 @@ async function migrate(config) {
         } else {
           console.log(`LOGGING ${id} (nothing to execute)`)
         }
-        await client.query(`INSERT INTO migrations (migration_id, migration_run_id) VALUES ($1, $2)`, [ id, migrationRunId ])
+        await client.query(`INSERT INTO cbpgm_migrations (migration_id, migration_run_id) VALUES ($1, $2)`, [ id, migrationRunId ])
       }
       await client.query(`COMMIT`);
       console.log(`${missingMigrations.length} MIGRATIONS DONE`);
@@ -155,7 +155,7 @@ async function rollback(config) {
   await client.query(`BEGIN`);
 
   try {
-    const lastRunResult = await client.query(`SELECT id FROM migration_runs ORDER BY created_at DESC LIMIT 1`);
+    const lastRunResult = await client.query(`SELECT id FROM cbpgm_migration_runs ORDER BY created_at DESC LIMIT 1`);
     const lastRunId = lastRunResult.rows.length > 0 ? lastRunResult.rows[0].id : null;
     const doneMigrations = await getMigrationsDone(client);
     const rollbackIds = doneMigrations.rows
@@ -175,8 +175,8 @@ async function rollback(config) {
           console.log(`SKIP ${id} (no down.sql)`)
         }
       }
-      await client.query(`DELETE FROM migrations WHERE migration_run_id = $1`, [ lastRunId ]);
-      await client.query(`DELETE FROM migration_runs WHERE id = $1`, [ lastRunId ]);
+      await client.query(`DELETE FROM cbpgm_migrations WHERE migration_run_id = $1`, [ lastRunId ]);
+      await client.query(`DELETE FROM cbpgm_migration_runs WHERE id = $1`, [ lastRunId ]);
       await client.query(`COMMIT`);
       console.log(`${rollbackMigrations.length} MIGRATIONS ROLLED BACK`);
     } else {
