@@ -65,6 +65,10 @@ async function getMigrations(config) {
   return keys.map((key) => migrationMap[key]);
 }
 
+function isIgnored(config, key) {
+  return config.ignore && config.ignore.includes(key);
+}
+
 function exists(path) {
   return fs.existsSync(path) ? path : null;
 }
@@ -102,7 +106,7 @@ async function recreate(config) {
 
 async function migrate(config) {
   await createdb(config);
-  const migrations = await getMigrations(config);
+  const migrations = (await getMigrations(config)).filter(id => isIgnored(config, id));
   const client = await getClient(config);
 
   await ensureMigrationsTables(client);
@@ -128,7 +132,7 @@ async function migrate(config) {
         } else {
           console.log(`LOGGING ${id} (nothing to execute)`)
         }
-        await client.query(`INSERT INTO cbpgm_migrations (migration_id, migration_run_id) VALUES ($1, $2)`, [ id, migrationRunId ])
+        await client.query(`INSERT INTO cbpgm_migrations (migration_id, migration_run_id) VALUES ($1, $2)`, [id, migrationRunId])
       }
       await client.query(`COMMIT`);
       console.log(`${missingMigrations.length} MIGRATIONS DONE`);
@@ -147,7 +151,7 @@ async function migrate(config) {
 async function rollback(config) {
   await createdb(config);
   console.log(`STARTING ROLLBACK`);
-  const migrations = await getMigrations(config);
+  const migrations = (await getMigrations(config)).filter(id => isIgnored(config, id));
   const client = await getClient(config);
 
   await ensureMigrationsTables(client);
@@ -175,8 +179,8 @@ async function rollback(config) {
           console.log(`SKIP ${id} (no down.sql)`)
         }
       }
-      await client.query(`DELETE FROM cbpgm_migrations WHERE migration_run_id = $1`, [ lastRunId ]);
-      await client.query(`DELETE FROM cbpgm_migration_runs WHERE id = $1`, [ lastRunId ]);
+      await client.query(`DELETE FROM cbpgm_migrations WHERE migration_run_id = $1`, [lastRunId]);
+      await client.query(`DELETE FROM cbpgm_migration_runs WHERE id = $1`, [lastRunId]);
       await client.query(`COMMIT`);
       console.log(`${rollbackMigrations.length} MIGRATIONS ROLLED BACK`);
     } else {
@@ -219,9 +223,12 @@ async function list(config) {
 
   const completed = [];
   const pending = [];
+  const ignored = [];
 
-  for (const {id} of migrations) {
-    if (done.includes(id)) {
+  for (const { id } of migrations) {
+    if (isIgnored(config, id)) {
+      ignored.push(id);
+    } else if (done.includes(id)) {
       completed.push(id);
     } else {
       pending.push(id);
@@ -230,14 +237,21 @@ async function list(config) {
 
   console.log("DONE");
   if (completed.length) {
-    console.log("\n  "+completed.join("\n  ") + "\n")
+    console.log("\n  " + completed.join("\n  ") + "\n")
   } else {
     console.log(`\n  -\n`)
   }
 
   console.log("NEW");
   if (pending.length) {
-    console.log("\n  "+pending.join("\n  ") + "\n")
+    console.log("\n  " + pending.join("\n  ") + "\n")
+  } else {
+    console.log(`\n  -\n`);
+  }
+
+  console.log("IGNORED");
+  if (ignored.length) {
+    console.log("\n  " + ignored.join("\n  ") + "\n")
   } else {
     console.log(`\n  -\n`);
   }
@@ -264,6 +278,8 @@ module.exports = {
     // connectionTimeoutMillis?: number, // number of milliseconds to wait for connection, default is no timeout
     // idle_in_transaction_session_timeout?: number // number of milliseconds before terminating any session with an open idle transaction, default is no timeout
   },
+  // ignored migrations, eg "foo" skips "foo/up.sql" and "foo/down.sql" or "foo.sql"
+  ignore: [],
   // directory where all migrations are stored
   dir: path.join(__dirname, "migrations")
 }`);
@@ -280,32 +296,32 @@ module.exports = {
 }
 
 // Source: https://stackoverflow.com/a/2802804
-function naturalSort(ar, index){
-  var L= ar.length, i, who, next,
-  isi= typeof index== 'number',
-  rx=  /(\.\d+)|(\d+(\.\d+)?)|([^\d.]+)|(\.(\D+|$))/g;
-  function nSort(aa, bb){
-      var a= aa[0], b= bb[0], a1, b1, i= 0, n, L= a.length;
-      while(i<L){
-          if(!b[i]) return 1;
-          a1= a[i];
-          b1= b[i++];
-          if(a1!== b1){
-              n= a1-b1;
-              if(!isNaN(n)) return n;
-              return a1>b1? 1: -1;
-          }
+function naturalSort(ar, index) {
+  var L = ar.length, i, who, next,
+    isi = typeof index == 'number',
+    rx = /(\.\d+)|(\d+(\.\d+)?)|([^\d.]+)|(\.(\D+|$))/g;
+  function nSort(aa, bb) {
+    var a = aa[0], b = bb[0], a1, b1, i = 0, n, L = a.length;
+    while (i < L) {
+      if (!b[i]) return 1;
+      a1 = a[i];
+      b1 = b[i++];
+      if (a1 !== b1) {
+        n = a1 - b1;
+        if (!isNaN(n)) return n;
+        return a1 > b1 ? 1 : -1;
       }
-      return b[i]!= undefined? -1: 0;
+    }
+    return b[i] != undefined ? -1 : 0;
   }
-  for(i= 0; i<L; i++){
-      who= ar[i];
-      next= isi? ar[i][index] || '': who;
-      ar[i]= [String(next).toLowerCase().match(rx), who];
+  for (i = 0; i < L; i++) {
+    who = ar[i];
+    next = isi ? ar[i][index] || '' : who;
+    ar[i] = [String(next).toLowerCase().match(rx), who];
   }
   ar.sort(nSort);
-  for(i= 0; i<L; i++){
-      ar[i]= ar[i][1];
+  for (i = 0; i < L; i++) {
+    ar[i] = ar[i][1];
   }
 }
 
