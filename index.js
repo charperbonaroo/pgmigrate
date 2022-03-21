@@ -105,7 +105,9 @@ async function recreate(config) {
 }
 
 async function migrate(config) {
-  await createdb(config);
+  if (config.createOnMigrate !== false) {
+    await createdb(config);
+  }
   const migrations = (await getMigrations(config)).filter(id => isIgnored(config, id));
   const client = await getClient(config);
 
@@ -281,7 +283,9 @@ module.exports = {
   // ignored migrations, eg "foo" skips "foo/up.sql" and "foo/down.sql" or "foo.sql"
   ignore: [],
   // directory where all migrations are stored
-  dir: path.join(__dirname, "migrations")
+  dir: path.join(__dirname, "migrations"),
+  // whether to try to create a database or not
+  createOnMigrate: true
 }`);
   } else {
     console.log(`${CONFIG_FILENAME} already exists`);
