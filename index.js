@@ -285,7 +285,7 @@ module.exports = {
   // directory where all migrations are stored
   dir: path.join(__dirname, "migrations"),
   // whether to try to create a database or not
-  createOnMigrate: true
+  createOnMigrate: !process.argv.includes("--no-create-on-migrate")
 }`);
   } else {
     console.log(`${CONFIG_FILENAME} already exists`);
