@@ -74,7 +74,7 @@ function exists(path) {
 }
 
 async function getMigrationsDone(client) {
-  return client.query(`SELECT id, migration_id, migration_run_id FROM public.cbpgm_migrations ORDER BY id DESC`);
+  return client.query(`SELECT id, migration_id, migration_run_id FROM public.cbpgm_migrations`);
 }
 
 async function ensureMigrationsTables(client) {
@@ -153,7 +153,7 @@ async function migrate(config) {
 async function rollback(config) {
   await createdb(config);
   console.log(`STARTING ROLLBACK`);
-  const migrations = (await getMigrations(config)).filter(({ id }) => !isIgnored(config, id));
+  const migrations = (await getMigrations(config)).filter(({ id }) => !isIgnored(config, id)).reverse();
   const client = await getClient(config);
 
   await ensureMigrationsTables(client);
