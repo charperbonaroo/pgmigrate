@@ -74,7 +74,7 @@ function exists(path) {
 }
 
 async function getMigrationsDone(client) {
-  return client.query(`SELECT id, migration_id, migration_run_id FROM public.cbpgm_migrations`);
+  return client.query(`SELECT id, migration_id, migration_run_id FROM public.cbpgm_migrations ORDER BY id DESC`);
 }
 
 async function ensureMigrationsTables(client) {
