@@ -197,7 +197,7 @@ async function rollback(config) {
     }
   } catch (error) {
     await client.query(`ROLLBACK`);
-    throw error;
+    throw new Error(renderError(error, lastQuery, lastFile));
   }
 
   await client.end();
