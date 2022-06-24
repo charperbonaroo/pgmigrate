@@ -166,6 +166,9 @@ async function rollback(config) {
 
   await client.query(`BEGIN`);
 
+  let lastQuery = null;
+  let lastFile = null;
+
   try {
     const lastRunResult = await client.query(`SELECT id FROM public.cbpgm_migration_runs ORDER BY created_at DESC LIMIT 1`);
     const lastRunId = lastRunResult.rows.length > 0 ? lastRunResult.rows[0].id : null;
@@ -180,8 +183,10 @@ async function rollback(config) {
     if (rollbackMigrations.length > 0) {
       for (const { id, down } of rollbackMigrations) {
         if (down) {
+          lastFile = down;
           console.log(`ROLLBACK ${down.replace(realPath, "").substr(1)}`);
           const sql = await readFile(down, "utf-8");
+          lastQuery = sql;
           await runSqlFileContent(client, sql);
         } else {
           console.log(`SKIP ${id} (no down.sql)`)
