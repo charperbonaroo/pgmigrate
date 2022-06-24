@@ -116,6 +116,9 @@ async function migrate(config) {
 
   await client.query(`BEGIN`);
 
+  let lastQuery = null;
+  let lastFile = null;
+
   try {
     const doneMigrations = await getMigrationsDone(client);
     const doneMigrationIds = doneMigrations.rows.map(({ migration_id }) => migration_id);
@@ -128,8 +131,10 @@ async function migrate(config) {
 
       for (const { id, up } of missingMigrations) {
         if (up) {
+          lastFile = realPath;
           console.log(`RUNNING ${up.replace(realPath, "").substr(1)}`);
           const sql = await readFile(up, "utf-8");
+          lastQuery = sql;
           await runSqlFileContent(client, sql);
         } else {
           console.log(`LOGGING ${id} (nothing to execute)`)
@@ -145,7 +150,7 @@ async function migrate(config) {
   } catch (error) {
     await client.query(`ROLLBACK`);
 
-    throw new Error(renderError(error));
+    throw new Error(renderError(error, lastQuery, lastFile));
   }
 
   await client.end();
@@ -300,11 +305,14 @@ module.exports = {
   }
 }
 
-function renderError(error) {
-  const { internalQuery, internalPosition, where, message, hint } = error;
+function renderError(error, lastQuery, lastFile) {
+  const { internalQuery, internalPosition, where, message, hint, position } = error;
   if (internalQuery) {
     const queryWithArrow = insertArrowAtPosition(internalQuery, internalPosition, "  ");
-    return `\n  ERROR: ${message}\n  HINT: ${hint}\n\n  ${where.replace(/\n/g, "\n  ")}\n\n${queryWithArrow}\n`;
+    return `\n  ERROR: ${message}\n  FILE: ${lastFile}\n  HINT: ${hint || "-"}\n\n  ${(where || "").replace(/\n/g, "\n  ")}\n\n${queryWithArrow}\n`;
+  } else if (lastQuery && position) {
+    const queryWithArrow = insertArrowAtPosition(lastQuery, parseFloat(position), "  ");
+    return `\n  ERROR: ${message}\n  FILE: ${lastFile}\n  HINT: ${hint || "-"}\n\n  ${queryWithArrow}\n`;
   } else {
     return require("util").inspect(error, false, Infinity, true);
   }
