@@ -300,9 +300,14 @@ module.exports = {
   }
 }
 
-function renderError({ internalQuery, internalPosition, where, message, hint }) {
-  const queryWithArrow = insertArrowAtPosition(internalQuery, internalPosition, "  ");
-  return `\n  ERROR: ${message}\n  HINT: ${hint}\n\n  ${where.replace(/\n/g, "\n  ")}\n\n${queryWithArrow}\n`;
+function renderError(error) {
+  const { internalQuery, internalPosition, where, message, hint } = error;
+  if (internalQuery) {
+    const queryWithArrow = insertArrowAtPosition(internalQuery, internalPosition, "  ");
+    return `\n  ERROR: ${message}\n  HINT: ${hint}\n\n  ${where.replace(/\n/g, "\n  ")}\n\n${queryWithArrow}\n`;
+  } else {
+    return require("util").inspect(error, false, Infinity, true);
+  }
 }
 
 function insertArrowAtPosition(multilineText, position, linePrefix = "") {
