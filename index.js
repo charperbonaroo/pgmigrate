@@ -144,7 +144,8 @@ async function migrate(config) {
     }
   } catch (error) {
     await client.query(`ROLLBACK`);
-    throw error;
+
+    throw new Error(renderError(error));
   }
 
   await client.end();
@@ -297,6 +298,25 @@ module.exports = {
   } else {
     console.log(`migrations/ already exists`);
   }
+}
+
+function renderError({ internalQuery, internalPosition, where, message, hint }) {
+  const queryWithArrow = insertArrowAtPosition(internalQuery, internalPosition, "  ");
+  return `\n  ERROR: ${message}\n  HINT: ${hint}\n\n  ${where.replace(/\n/g, "\n  ")}\n\n${queryWithArrow}\n`;
+}
+
+function insertArrowAtPosition(multilineText, position, linePrefix = "") {
+  const { lines } = multilineText
+    .split(/\n/g)
+    .reduce(({ sum, lines }, line) => {
+      const len = line.length + 1;
+      const pos = position - sum;
+      lines.push({ content: line, start: sum, pos: pos > 0 && pos < len ? pos : null });
+      return { sum: sum + len, lines };
+    }, { sum: 0, lines: [] });
+
+  return lines.map(({ content, pos }) => linePrefix + content +
+    (pos == null ? "" : "\n" + linePrefix + new Array(pos).fill("").join("-") + "^")).join("\n");
 }
 
 // Source: https://stackoverflow.com/a/2802804
