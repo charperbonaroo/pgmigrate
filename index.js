@@ -210,6 +210,7 @@ async function rollback(config) {
 
 async function runSqlFileContent(client, sql) {
   await client.query(sql);
+  await new Promise((resolve) => setTimeout(resolve, 500));
 }
 
 async function config(config) {
