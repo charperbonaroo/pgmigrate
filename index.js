@@ -65,6 +65,22 @@ async function getMigrations(config) {
   return keys.map((key) => migrationMap[key]);
 }
 
+
+async function getTests(config) {
+  const realPath = fs.realpathSync(config.testDir);
+  const testPaths = fs.readdirSync(realPath, { withFileTypes: true });
+  const testMap = testPaths.map((value) => {
+    if (value.isFile() && value.name.endsWith(".sql")) {
+      return { id: value.name.replace(/.sql$/, ""), path: path.join(realPath, value.name) }
+    } else {
+      return null;
+    }
+  }).filter(_ => _).reduce((acc, value) => ({ ...acc, [value.id]: value }), {});
+  const keys = Object.keys(testMap)
+  naturalSort(keys);
+  return keys.map((key) => testMap[key]);
+}
+
 function isIgnored(config, key) {
   return config.ignore && config.ignore.includes(key);
 }
@@ -295,6 +311,8 @@ module.exports = {
   ignore: [],
   // directory where all migrations are stored
   dir: path.join(__dirname, "migrations"),
+  // directory where all tests are stored
+  testDir: path.join(__dirname, "tests"),
   // whether to try to create a database or not
   createOnMigrate: !process.argv.includes("--no-create-on-migrate")
 }`);
@@ -302,11 +320,64 @@ module.exports = {
     console.log(`${CONFIG_FILENAME} already exists`);
   }
 
+  if (!fs.existsSync("tests")) {
+    console.log(`CREATING tests/`);
+    fs.mkdirSync("tests", { recursive: true });
+  } else {
+    console.log(`tests/ already exists`);
+  }
+
   if (!fs.existsSync("migrations")) {
     console.log(`CREATING migrations/`);
     fs.mkdirSync("migrations", { recursive: true });
   } else {
     console.log(`migrations/ already exists`);
+  }
+}
+
+async function test(config) {
+  const client = await getClient(config);
+  try {
+    console.log(`START TEST`);
+
+    const tests = await getTests(config);
+
+    if (!tests.length) {
+      throw new Error(`Found no tests`);
+    }
+
+    let okCount = 0;
+    let errCount = 0;
+
+    for (const test of tests) {
+      try {
+        await client.query(`BEGIN`);
+
+        const sql = await readFile(test.path, "utf-8");
+        lastFile = test.path;
+        lastQuery = sql;
+        await runSqlFileContent(client, sql);
+
+        test.ok = true;
+        okCount++;
+      } catch (error) {
+        test.ok = false;
+        errCount++;
+        test.err = error && error.message;
+        console.error(renderError(error, lastQuery, lastFile));
+      } finally {
+        await client.query(`ROLLBACK`);
+      }
+      console.log(`TEST ${test.id}: ${test.ok ? "OK" : test.err}`);
+    }
+
+    if (errCount > 0) {
+      throw new Error(`${errCount} / ${tests.length} FAILED`);
+    }
+
+    console.log(`${tests.length} OK!`);
+  } finally {
+    await client.end();
   }
 }
 
@@ -368,5 +439,5 @@ function naturalSort(ar, index) {
 }
 
 module.exports = {
-  rollback, migrate, recreate, createdb, dropdb, init, config, help, list, CONFIG_FILENAME
+  rollback, migrate, recreate, createdb, dropdb, init, config, help, list, test, CONFIG_FILENAME
 }
