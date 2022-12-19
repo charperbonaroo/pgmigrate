@@ -1,4 +1,5 @@
 migrations
+tests
 .cbpgm.js
 
 # YARN-2 stuff (Zero-Installs)
