@@ -12,6 +12,9 @@ const CONFIG_FILENAME = process.env.CONFIG_FILENAME || `.cbpgm.js`;
 
 async function getClient(config) {
   const client = new Client(config.pg);
+  client.on("notice", (notice) => {
+    console.log(notice.severity, notice.name, notice.code, notice.message, "FROM", notice.where);
+  });
   await client.connect();
   return client;
 }
