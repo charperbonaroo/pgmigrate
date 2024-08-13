@@ -176,7 +176,6 @@ async function migrate(config) {
 }
 
 async function rollback(config) {
-  await createdb(config);
   console.log(`STARTING ROLLBACK`);
   const migrations = (await getMigrations(config)).filter(({ id }) => !isIgnored(config, id)).reverse();
   const client = await getClient(config);
