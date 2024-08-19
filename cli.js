@@ -5,7 +5,6 @@ const path = require("path");
 const fs = require("fs");
 
 const [cmd, ...args] = process.argv.slice(process.argv.indexOf(__filename) + 1);
-console.log({ cmd, args });
 const configPath = path.join(process.cwd(), migrate.CONFIG_FILENAME);
 
 const config = fs.existsSync(configPath) ? require(configPath) : {

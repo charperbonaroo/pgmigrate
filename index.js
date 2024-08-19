@@ -52,7 +52,7 @@ async function getMigrations(config) {
 }
 
 function getMigrationInDirectory(root) {
-  const files = getFilesRecursively(root);
+  const files = getFilesRecursively(root).filter((f) => f.endsWith(".sql"));
 
   const idfn = (f) => f.replace(/(?:\/up|\/down)?\.sql$/, "");
   const ids = files.map((f) => idfn(f)).filter((f, i, a) => a.indexOf(f) == i);
