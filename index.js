@@ -48,26 +48,42 @@ async function dropdb(config) {
 }
 
 async function getMigrations(config) {
-  const realPath = fs.realpathSync(config.dir);
-  const migrationPaths = fs.readdirSync(realPath, { withFileTypes: true });
-  const migrationMap = migrationPaths.map((value) => {
-    if (value.isFile() && value.name.endsWith(".sql")) {
-      return { id: value.name.replace(/.sql$/, ""), up: path.join(realPath, value.name), down: null }
-    } else if (value.isDirectory()) {
-      return {
-        id: value.name,
-        up: exists(path.join(realPath, value.name, `up.sql`)),
-        down: exists(path.join(realPath, value.name, `down.sql`))
-      }
-    } else {
-      return null;
-    }
-  }).filter(_ => _ && (_.up || _.down)).reduce((acc, value) => ({ ...acc, [value.id]: value }), {});
-  const keys = Object.keys(migrationMap)
-  naturalSort(keys);
-  return keys.map((key) => migrationMap[key]);
+  return getMigrationInDirectory(fs.realpathSync(config.dir));
 }
 
+function getMigrationInDirectory(root) {
+  const files = getFilesRecursively(root);
+
+  const idfn = (f) => f.replace(/(?:\/up|\/down)?\.sql$/, "");
+  const ids = files.map((f) => idfn(f)).filter((f, i, a) => a.indexOf(f) == i);
+  naturalSort(ids);
+
+  const unsafeIds = ids.filter((id) => !/^[a-z\d_][a-z\d_-]*(?:\/[a-z\d_][a-z\d_-]*)*$/.test(id));
+  if (unsafeIds.length) {
+    console.warn(`\n* WARNING: THESE MIGRATIONS HAVE UNSAFE NAMES:\n*`);
+    console.warn(unsafeIds.map((id) => `*   - ${JSON.stringify(id)}`).join("\n"));
+    console.warn(`*\n* LIMIT ID NAMES TO a-z (lowercase), 0-9, "/", "_" AND "-".\n*`);
+    console.warn(`* "unsafe" migration names might result in undefined or `);
+    console.warn(`* unexpected behavior. Or it might be fine. Who knows?`);
+    console.warn(`* Better play it safe and stick with safe names.\n`);
+  }
+
+  const realpath = (f) => f ? path.join(root, f) : null;
+
+  return ids.map((id) => ({
+    id,
+    up: realpath(files.find((f) => f == path.join(id, "up.sql") || f == `${id}.sql`)),
+    down: realpath(files.find((f) => f == path.join(id, "down.sql")))
+  }));
+}
+
+function getFilesRecursively(root) {
+  return fs.readdirSync(root, { withFileTypes: true, recursive: true }).flatMap((dirent) =>
+    dirent.isDirectory()
+      ? getFilesRecursively(path.join(root, dirent.name))
+        .map((name) => path.join(dirent.name, name))
+      : dirent.name)
+}
 
 async function getTests(config) {
   const realPath = fs.realpathSync(config.testDir);
@@ -86,10 +102,6 @@ async function getTests(config) {
 
 function isIgnored(config, key) {
   return config.ignore && config.ignore.includes(key);
-}
-
-function exists(path) {
-  return fs.existsSync(path) ? path : null;
 }
 
 async function getMigrationsDone(client) {
@@ -123,7 +135,7 @@ async function recreate(config) {
   await migrate(config);
 }
 
-async function migrate(config) {
+async function migrate(config, ...argv) {
   if (config.createOnMigrate !== false) {
     await createdb(config);
   }
@@ -141,7 +153,13 @@ async function migrate(config) {
   try {
     const doneMigrations = await getMigrationsDone(client);
     const doneMigrationIds = doneMigrations.rows.map(({ migration_id }) => migration_id);
-    const missingMigrations = migrations.filter(({ id }) => !doneMigrationIds.includes(id));
+    let missingMigrations = migrations.filter(({ id }) => !doneMigrationIds.includes(id));
+
+    const argvIds = argv.filter((arg) => arg[0] != "-");
+    if (argvIds.length) {
+      console.log(`FILTERING MIGRATIONS BY IDs [${argvIds.join(",")}]`);
+      missingMigrations = missingMigrations.filter(({ id }) => argvIds.includes(id));
+    }
 
     if (missingMigrations.length > 0) {
       const insertResult = await client.query(`INSERT INTO public.cbpgm_migration_runs DEFAULT VALUES RETURNING id`);
@@ -175,7 +193,11 @@ async function migrate(config) {
   await client.end();
 }
 
-async function rollback(config) {
+async function rollback(config, ...argv) {
+  if (argv.length === 0) {
+    throw new Error(`Requires --last or specific migration IDs`)
+  }
+
   console.log(`STARTING ROLLBACK`);
   const migrations = (await getMigrations(config)).filter(({ id }) => !isIgnored(config, id)).reverse();
   const client = await getClient(config);
@@ -188,18 +210,35 @@ async function rollback(config) {
   let lastFile = null;
 
   try {
-    const lastRunResult = await client.query(`SELECT id FROM public.cbpgm_migration_runs ORDER BY created_at DESC LIMIT 1`);
-    const lastRunId = lastRunResult.rows.length > 0 ? lastRunResult.rows[0].id : null;
-    const doneMigrations = await getMigrationsDone(client);
-    const rollbackIds = doneMigrations.rows
-      .filter(({ migration_run_id }) => migration_run_id == lastRunId)
-      .map(({ migration_id }) => migration_id);
+    let rollbackIds = [], lastRunId;
+
+    {
+      const doneMigrations = await getMigrationsDone(client);
+      if (argv.includes("--last")) {
+        const lastRunResult = await client.query(`SELECT id FROM public.cbpgm_migration_runs ORDER BY created_at DESC LIMIT 1`);
+        lastRunId = lastRunResult.rows.length > 0 ? lastRunResult.rows[0].id : null;
+        rollbackIds.push(...doneMigrations.rows
+          .filter(({ migration_run_id }) => migration_run_id == lastRunId)
+          .map(({ migration_id }) => migration_id));
+        console.log(`ATTEMPT TO ROLLBACK LAST, IDS [${rollbackIds.join(",")}]`);
+      }
+      const argvIds = argv.filter((arg) => arg[0] != "-");
+      if (argvIds.length > 0) {
+        rollbackIds.push(...doneMigrations.rows
+          .filter(({ migration_id }) => argv.includes(migration_id))
+          .map(({ migration_id }) => migration_id));
+        console.log(`ATTEMPT TO ROLLBACK WITH IDS [${argv.join(",")}]`);
+      }
+    }
 
     const rollbackMigrations = migrations.filter(({ id }) => rollbackIds.includes(id));
+    console.log(`FOUND [${rollbackMigrations.map((m) => m.id).join(",")}]`)
+
     const realPath = fs.realpathSync(config.dir);
 
     if (rollbackMigrations.length > 0) {
       for (const { id, down } of rollbackMigrations) {
+        await client.query(`DELETE FROM public.cbpgm_migrations WHERE migration_id = $1`, [id]);
         if (down) {
           lastFile = down;
           console.log(`ROLLBACK ${down.replace(realPath, "").substr(1)}`);
@@ -210,8 +249,9 @@ async function rollback(config) {
           console.log(`SKIP ${id} (no down.sql)`)
         }
       }
-      await client.query(`DELETE FROM public.cbpgm_migrations WHERE migration_run_id = $1`, [lastRunId]);
-      await client.query(`DELETE FROM public.cbpgm_migration_runs WHERE id = $1`, [lastRunId]);
+      if (lastRunId) {
+        await client.query(`DELETE FROM public.cbpgm_migration_runs WHERE id = $1`, [lastRunId]);
+      }
       await client.query(`COMMIT`);
       console.log(`${rollbackMigrations.length} MIGRATIONS ROLLED BACK`);
     } else {

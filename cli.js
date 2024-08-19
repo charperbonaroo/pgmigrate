@@ -4,7 +4,7 @@ const migrate = require(".");
 const path = require("path");
 const fs = require("fs");
 
-const cmd = process.argv[process.argv.length - 1];
+const [cmd, ...args] = process.argv.slice(process.argv.indexOf(__filename) + 1);
 const configPath = path.join(process.cwd(), migrate.CONFIG_FILENAME);
 
 const config = fs.existsSync(configPath) ? require(configPath) : {
@@ -21,7 +21,7 @@ async function main(cmd) {
       }
       cmd = "help";
     }
-    await migrate[cmd](config);
+    await migrate[cmd](config, ...args);
   } catch (error) {
     console.error(error);
     process.exit(1);

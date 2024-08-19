@@ -14,13 +14,15 @@ Commands:
 
   migrate   Create database if not exists, then run the `up.sql` files for the
             migrations and add them to the list of completed migrations, sorted
-            naturally.
+            naturally. Accepts migration IDs to rollback individual migrations,
+            otherwise runs all migrations.
 
   up        Alias for migrate
 
   rollback  Run `down.sql` (if exists) for all migrations executed in the last
             `migrate`-call (even if the folder had no `up.sql` file) in reverse
-            order.
+            order. Requires migration IDs to rollback individual migrations, or
+            `--last` to rollback the last migration.
 
   down      Alias for rollback
 
@@ -58,3 +60,5 @@ Example folder structure (naturally sorted):
     12-add-categories.sql
     13-add-votes/    up.sql  down.sql
     101-add-reports/ up.sql  down.sql
+
+If you're running this command from the repo, you can use `./cli.js` instead of `cbpgm`.
