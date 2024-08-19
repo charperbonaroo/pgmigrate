@@ -116,7 +116,7 @@ async function recreate(config) {
   try {
     await dropdb(config);
   } catch (error) {
-    if (error.message !== "Attempted to drop a database that does not exist") {
+    if (!error.message.includes("Attempted to drop a database that does not exist")) {
       throw error;
     }
   }
@@ -441,5 +441,19 @@ function naturalSort(ar, index) {
 }
 
 module.exports = {
-  rollback, migrate, recreate, createdb, dropdb, init, config, help, list, test, CONFIG_FILENAME
+  rollback,
+  down: rollback,
+  migrate,
+  up: migrate,
+  recreate,
+  createdb,
+  create: createdb,
+  dropdb,
+  drop: dropdb,
+  init,
+  config,
+  help,
+  list,
+  test,
+  CONFIG_FILENAME
 }

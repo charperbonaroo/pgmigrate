@@ -16,9 +16,13 @@ Commands:
             migrations and add them to the list of completed migrations, sorted
             naturally.
 
+  up        Alias for migrate
+
   rollback  Run `down.sql` (if exists) for all migrations executed in the last
             `migrate`-call (even if the folder had no `up.sql` file) in reverse
             order.
+
+  down      Alias for rollback
 
   init      Create the .cbpgm.js config file & migrations directory
   config    Print the current postgres config
@@ -26,7 +30,10 @@ Commands:
   list      Print the list of migrations and their status
 
   createdb  Create the postgres database (without migrations)
+  create    Alias for createdb
+
   dropdb    Delete the postgres database.
+  drop      Alias for dropdb
 
 This tool allows you to write migration scripts in plain SQL. You create your
 migration by creating a folder containing a `up.sql` and `down.sql` file. The
