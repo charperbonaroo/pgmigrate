@@ -11,5 +11,7 @@
     "cli.js"
   ],
   "main": "index.js",
-  "bin": "cli.js"
+  "bin": {
+    "cbpgm": "cli.js"
+  }
 }
