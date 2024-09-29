@@ -1,1 +1,3 @@
-yarn npm publish
+```sh
+npm publish
+```
