@@ -77,13 +77,21 @@ function getMigrationInDirectory(root) {
   }));
 }
 
-function getFilesRecursively(root) {
-  return fs.readdirSync(root, { withFileTypes: true, recursive: true }).flatMap((dirent) =>
-    dirent.isDirectory()
-      ? getFilesRecursively(path.join(root, dirent.name))
-        .map((name) => path.join(dirent.name, name))
-      : dirent.name)
+function getFilesRecursively(root, subdir = []) {
+  const dir = fs.readdirSync(path.join(root, ...subdir), { withFileTypes: true });
+  const acc = [];
+
+  for (const dirent of dir) {
+    if (dirent.isDirectory()) {
+      acc.push(...getFilesRecursively(root, [...subdir, dirent.name]));
+    } else {
+      acc.push(path.join(...subdir, dirent.name));
+    }
+  }
+
+  return acc;
 }
+
 
 async function getTests(config) {
   const realPath = fs.realpathSync(config.testDir);
